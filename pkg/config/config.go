@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-// Config holds the config of the monitor
+// Config holds the config of the gitlab
 type Config struct {
 	Groups []string `json:"groups"`
 	Repos  []string `json:"repos"`

@@ -1,4 +1,4 @@
-package: github.com/apinnecke/gitlab-razer-device-build-monitor
+package: github.com/apinnecke/gitlab-razer-device-build-gitlab
 import:
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper

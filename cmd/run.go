@@ -9,7 +9,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/apinnecke/gitlab-razer-device-build-monitor/pkg/config"
-	"github.com/apinnecke/gitlab-razer-device-build-monitor/pkg/monitor"
+	gl "github.com/apinnecke/gitlab-razer-device-build-monitor/pkg/gitlab"
 	"github.com/spf13/cobra"
 	"github.com/xanzy/go-gitlab"
 )
@@ -17,7 +17,7 @@ import (
 // runCmd represents the run command
 var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "A brief description of your command",
+	Short: "Run the gitlab",
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := logrus.New()
 
@@ -32,7 +32,7 @@ var runCmd = &cobra.Command{
 		}
 
 		client := gitlab.NewClient(nil, os.Getenv("GITLAB_API_TOKEN"))
-		fetcher, err := monitor.NewRepoFetcher(logger.WithField("module", "repo_fetcher"), client, cfg)
+		fetcher, err := gl.NewRepoFetcher(logger.WithField("module", "repo_fetcher"), client.Groups, cfg)
 		if err != nil {
 			logger.Fatalf("Failed to create GitLab client: %v", err)
 		}
@@ -51,7 +51,7 @@ var runCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(runCmd)
 
-	runCmd.Flags().StringP("config-file", "f", filepath.Join(os.Getenv("HOME"), ".gitlab-build-monitor.json"), "Path to the config file (default: ~~.gitlab-build-monitor.json)")
+	runCmd.Flags().StringP("config-file", "f", filepath.Join(os.Getenv("HOME"), ".gitlab-build-monitor.json"), "Path to the config file (default: ~~.gitlab-build-gitlab.json)")
 
 	// Here you will define your flags and configuration settings.
 

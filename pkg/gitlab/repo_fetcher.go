@@ -1,4 +1,4 @@
-package monitor
+package gitlab
 
 import (
 	"fmt"
@@ -18,32 +18,24 @@ var (
 	})
 )
 
-type fetcherClient interface {
+type groupsClient interface {
+	ListGroupProjects(gid interface{}, opt *gitlab.ListGroupProjectsOptions, options ...gitlab.OptionFunc) ([]*gitlab.Project, *gitlab.Response, error)
 }
 
 // RepoFetcher fetches a list of repositories from GitLab
 type RepoFetcher struct {
 	logger *logrus.Entry
-	client *gitlab.Client
+	client groupsClient
 	config *config.Config
 }
 
 // NewRepoFetcher returns a new RepoFetcher instance
-func NewRepoFetcher(logger *logrus.Entry, client *gitlab.Client, config *config.Config) (*RepoFetcher, error) {
+func NewRepoFetcher(logger *logrus.Entry, client groupsClient, config *config.Config) (*RepoFetcher, error) {
 	return &RepoFetcher{
 		logger: logger,
 		client: client,
 		config: config,
 	}, nil
-}
-
-func (f *RepoFetcher) getCurrentUserName() (string, error) {
-	user, _, err := f.client.Users.CurrentUser()
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch currently authenticated user: %v", err)
-	}
-
-	return user.Username, nil
 }
 
 // Fetch fetches a list of accessible repos within the groups set in config file
@@ -58,7 +50,7 @@ func (f *RepoFetcher) Fetch() ([]string, error) {
 	}
 
 	for _, group := range f.config.Groups {
-		projects, _, err := f.client.Groups.ListGroupProjects(group, opt, addIncludeSubgroups)
+		projects, _, err := f.client.ListGroupProjects(group, opt, addIncludeSubgroups)
 		if err != nil {
 			return []string{}, fmt.Errorf("failed to fetch GitLab projects or group %q: %v", group, err)
 		}

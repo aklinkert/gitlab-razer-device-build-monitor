@@ -11,7 +11,7 @@ import (
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "gitlab-razer-device-build-monitor",
+	Use:   "gitlab-razer-device-build-gitlab",
 	Short: "Watch a list of GitLab repositories and watch for failed builds using razer devices as feedback device",
 }
 
