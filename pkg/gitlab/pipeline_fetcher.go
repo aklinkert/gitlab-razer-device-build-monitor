@@ -2,6 +2,7 @@ package gitlab
 
 import (
 	"fmt"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/xanzy/go-gitlab"
 )
@@ -27,9 +28,11 @@ func NewPipelineFetcher(logger *logrus.Entry, client pipelinesClient) (*Pipeline
 
 // GetPipelineStatusForProject returns the latest state for a projects pipeline, limited to given username
 func (p *PipelineFetcher) GetPipelineStatusForProject(username string, projectID int) (string, error) {
-	pipelines, _, err := p.client.ListProjectPipelines(projectID, &gitlab.ListProjectPipelinesOptions{
+	opt := &gitlab.ListProjectPipelinesOptions{
 		Username: gitlab.String(username),
-	})
+	}
+
+	pipelines, _, err := p.client.ListProjectPipelines(projectID, opt)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch currently authenticated pipeline: %v", err)
 	}
@@ -45,7 +48,7 @@ func (p *PipelineFetcher) GetPipelineStatusForProject(username string, projectID
 			continue
 		}
 
-		p.logger.Debugf("Project=%d pipeline=%d state =%s", projectID, pipeline.ID, pipeline.Status)
+		p.logger.Debugf("Processing pipeline project=%d pipeline=%d state=%s ref=%s", projectID, pipeline.ID, pipeline.Status, pipeline.Ref)
 		latestStatus = pipeline.Status
 	}
 

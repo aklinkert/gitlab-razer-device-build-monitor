@@ -1,4 +1,4 @@
-package: github.com/apinnecke/gitlab-razer-device-build-gitlab
+package: github.com/apinnecke/gitlab-razer-device-build-monitor
 import:
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
@@ -6,3 +6,4 @@ import:
   version: ^1.3.0
 - package: github.com/xanzy/go-gitlab
   version: ^0.13.0
+- package: github.com/apinnecke/go-exitcontext

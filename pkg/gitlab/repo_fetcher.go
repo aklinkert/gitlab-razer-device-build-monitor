@@ -39,8 +39,8 @@ func NewRepoFetcher(logger *logrus.Entry, client groupsClient, config *config.Co
 }
 
 // Fetch fetches a list of accessible repos within the groups set in config file
-func (f *RepoFetcher) Fetch() ([]string, error) {
-	var repos []string
+func (f *RepoFetcher) GetProjectsWithAtLeastDevAccess() ([]Repo, error) {
+	var repos []Repo
 
 	opt := &gitlab.ListGroupProjectsOptions{
 		MinAccessLevel: gitlab.AccessLevel(gitlab.DeveloperPermissions),
@@ -49,17 +49,25 @@ func (f *RepoFetcher) Fetch() ([]string, error) {
 		},
 	}
 
+	f.logger.Debugf("Fetching gitlab repos for %d groups (%s) ...", len(f.config.Groups), f.config.Groups)
+
 	for _, group := range f.config.Groups {
 		projects, _, err := f.client.ListGroupProjects(group, opt, addIncludeSubgroups)
 		if err != nil {
-			return []string{}, fmt.Errorf("failed to fetch GitLab projects or group %q: %v", group, err)
+			return []Repo{}, fmt.Errorf("failed to fetch GitLab projects or group %q: %v", group, err)
 		}
 
 		for _, p := range projects {
-			repos = append(repos, p.PathWithNamespace)
+			repos = append(repos, Repo{
+				ID:       p.ID,
+				Name:     p.Name,
+				FullPath: p.PathWithNamespace,
+			})
 		}
 
 	}
+
+	f.logger.Debugf("Fetching gitlab repos done. Got %d repos.", len(repos))
 
 	return repos, nil
 }

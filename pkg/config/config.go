@@ -10,8 +10,9 @@ import (
 
 // Config holds the config of the gitlab
 type Config struct {
-	Groups []string `json:"groups"`
-	Repos  []string `json:"repos"`
+	Branches []string `json:"branches"`
+	Groups   []string `json:"groups"`
+	Repos    []string `json:"repos"`
 }
 
 var (

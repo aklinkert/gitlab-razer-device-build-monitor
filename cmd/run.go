@@ -6,6 +6,11 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"time"
+
+	"github.com/apinnecke/go-exitcontext"
+
+	"github.com/apinnecke/gitlab-razer-device-build-monitor/pkg/monitor"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/apinnecke/gitlab-razer-device-build-monitor/pkg/config"
@@ -21,6 +26,15 @@ var runCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := logrus.New()
 
+		verbose, err := cmd.Flags().GetBool("verbose")
+		if err != nil {
+			logger.Fatalf("failed to get verbose parameter: %v", err)
+		}
+
+		if verbose {
+			logger.SetLevel(logrus.DebugLevel)
+		}
+
 		cfgFilePath, err := cmd.Flags().GetString("config-file")
 		if err != nil {
 			logger.Fatalf("failed to get config-file parameter: %v", err)
@@ -32,24 +46,40 @@ var runCmd = &cobra.Command{
 		}
 
 		client := gitlab.NewClient(nil, os.Getenv("GITLAB_API_TOKEN"))
-		fetcher, err := gl.NewRepoFetcher(logger.WithField("module", "repo_fetcher"), client.Groups, cfg)
+
+		userFetcher, err := gl.NewUserFetcher(logger.WithField("module", "user_fetcher"), client.Users)
 		if err != nil {
-			logger.Fatalf("Failed to create GitLab client: %v", err)
+			logger.Fatalf("Failed to create UserFetcher: %v", err)
 		}
 
-		repos, err := fetcher.Fetch()
+		repoFetcher, err := gl.NewRepoFetcher(logger.WithField("module", "repo_fetcher"), client.Groups, cfg)
 		if err != nil {
-			logger.Fatalf("Failed to fetch repos: %v", err)
+			logger.Fatalf("Failed to create RepoFetcher: %v", err)
 		}
 
-		for _, r := range repos {
-			logger.Infof("Found repo: %v", r)
+		pipelineFetcher, err := gl.NewPipelineFetcher(logger.WithField("module", "pipeline_fetcher"), client.Pipelines)
+		if err != nil {
+			logger.Fatalf("Failed to create PipelineFetcher: %v", err)
 		}
+
+		mon, err := monitor.New(logger.WithField("module", "monitor"), userFetcher, repoFetcher, pipelineFetcher)
+		if err != nil {
+			logger.Fatalf("Failed to create Monitor: %v", err)
+		}
+
+		if err := mon.UpdateStatus(); err != nil {
+			logger.Fatalf("Failed to do initial status update: %v", err)
+		}
+
+		ctx := exitcontext.New()
+		mon.UpdateEvery(ctx, time.Minute)
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(runCmd)
+
+	runCmd.Flags().BoolP("verbose", "v", false, "Run the command in verbose / debug mode")
 
 	runCmd.Flags().StringP("config-file", "f", filepath.Join(os.Getenv("HOME"), ".gitlab-build-monitor.json"), "Path to the config file (default: ~~.gitlab-build-gitlab.json)")
 

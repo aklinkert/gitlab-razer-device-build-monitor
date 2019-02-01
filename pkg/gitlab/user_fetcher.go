@@ -2,6 +2,7 @@ package gitlab
 
 import (
 	"fmt"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/xanzy/go-gitlab"
 )
@@ -26,10 +27,14 @@ func NewUserFetcher(logger *logrus.Entry, client usersClient) (*UserFetcher, err
 
 // GetCurrentUserName fetches the current username from the GitLab API
 func (u *UserFetcher) GetCurrentUserName() (string, error) {
+	u.logger.Debugf("Fetching gitlab username ...")
+
 	user, _, err := u.client.CurrentUser()
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch currently authenticated user: %v", err)
 	}
+
+	u.logger.Debugf("Fetching gitlab username done. Username = %s, UserID = %d", user.Username, user.ID)
 
 	return user.Username, nil
 }
