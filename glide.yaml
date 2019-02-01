@@ -7,3 +7,5 @@ import:
 - package: github.com/xanzy/go-gitlab
   version: ^0.13.0
 - package: github.com/apinnecke/go-exitcontext
+- package: github.com/godbus/dbus
+  version: ^5.0.1
