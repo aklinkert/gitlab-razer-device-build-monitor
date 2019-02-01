@@ -16,3 +16,15 @@ type Repo struct {
 	Name     string
 	FullPath string
 }
+
+// RepoStatus holds the state of the last pipeline for each ref
+type RepoStatus map[string]PipelineStatus
+
+type PipelineStatus struct {
+	ID       int
+	Status   string
+	Username string
+	UserID   int
+	Ref      string
+	SHA      string
+}

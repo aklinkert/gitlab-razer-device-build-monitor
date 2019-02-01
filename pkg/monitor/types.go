@@ -11,10 +11,30 @@ type repoFetcher interface {
 }
 
 type pipelineFetcher interface {
-	GetPipelineStatusForProject(username string, projectID int) (string, error)
+	GetPipelineStatusForEachRef(projectID int) (gitlab.RepoStatus, error)
 }
 
+// RepoPipelineStatus carries the current status of all refs of a repo
 type RepoPipelineStatus struct {
 	Repo   gitlab.Repo
-	Status string
+	Status gitlab.RepoStatus
+}
+
+// StatusNotification is distributed carrying the infos about all failed builds and the overall status
+type StatusNotification struct {
+	Status          string
+	FailedPipelines []StatusNotificationPipeline
+}
+
+// StatusNotificationPipeline carries the info about which pipeline in which repo failed
+type StatusNotificationPipeline struct {
+	RepoID   int
+	RepoName string
+	RepoURL  string
+	Branch   string
+}
+
+// NotificationReceiver is the subscriber to StatusNotifications
+type NotificationReceiver interface {
+	ReceiveStatusNotification(status StatusNotification)
 }

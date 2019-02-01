@@ -8,11 +8,12 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Sirupsen/logrus"
+	"github.com/apinnecke/gitlab-razer-device-build-monitor/pkg/output"
 	"github.com/apinnecke/go-exitcontext"
 
 	"github.com/apinnecke/gitlab-razer-device-build-monitor/pkg/monitor"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/apinnecke/gitlab-razer-device-build-monitor/pkg/config"
 	gl "github.com/apinnecke/gitlab-razer-device-build-monitor/pkg/gitlab"
 	"github.com/spf13/cobra"
@@ -23,17 +24,10 @@ import (
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run the gitlab",
+	PreRun: func(cmd *cobra.Command, args []string) {
+
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		logger := logrus.New()
-
-		verbose, err := cmd.Flags().GetBool("verbose")
-		if err != nil {
-			logger.Fatalf("failed to get verbose parameter: %v", err)
-		}
-
-		if verbose {
-			logger.SetLevel(logrus.DebugLevel)
-		}
 
 		cfgFilePath, err := cmd.Flags().GetString("config-file")
 		if err != nil {
@@ -57,7 +51,7 @@ var runCmd = &cobra.Command{
 			logger.Fatalf("Failed to create RepoFetcher: %v", err)
 		}
 
-		pipelineFetcher, err := gl.NewPipelineFetcher(logger.WithField("module", "pipeline_fetcher"), client.Pipelines)
+		pipelineFetcher, err := gl.NewPipelineFetcher(logger.WithField("module", "pipeline_fetcher"), client.Pipelines, cfg)
 		if err != nil {
 			logger.Fatalf("Failed to create PipelineFetcher: %v", err)
 		}
@@ -67,19 +61,24 @@ var runCmd = &cobra.Command{
 			logger.Fatalf("Failed to create Monitor: %v", err)
 		}
 
+		logOutput, err := output.NewLogOutout(logger.WithFields(logrus.Fields{}))
+		if err != nil {
+			logger.Fatalf("failed to create a new LogOutput: %v", err)
+		}
+
+		mon.RegisterNotificationReceiver(logOutput)
+
 		if err := mon.UpdateStatus(); err != nil {
 			logger.Fatalf("Failed to do initial status update: %v", err)
 		}
 
 		ctx := exitcontext.New()
-		mon.UpdateEvery(ctx, time.Minute)
+		mon.UpdateEvery(ctx, 5*time.Minute)
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(runCmd)
-
-	runCmd.Flags().BoolP("verbose", "v", false, "Run the command in verbose / debug mode")
 
 	runCmd.Flags().StringP("config-file", "f", filepath.Join(os.Getenv("HOME"), ".gitlab-build-monitor.json"), "Path to the config file (default: ~~.gitlab-build-gitlab.json)")
 

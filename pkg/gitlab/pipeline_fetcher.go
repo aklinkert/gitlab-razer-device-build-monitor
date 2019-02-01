@@ -3,6 +3,8 @@ package gitlab
 import (
 	"fmt"
 
+	"github.com/apinnecke/gitlab-razer-device-build-monitor/pkg/config"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/xanzy/go-gitlab"
 )
@@ -16,41 +18,74 @@ type pipelinesClient interface {
 type PipelineFetcher struct {
 	logger *logrus.Entry
 	client pipelinesClient
+	config *config.Config
 }
 
 // NewPipelineFetcher returns a new PipelineFetcher instance
-func NewPipelineFetcher(logger *logrus.Entry, client pipelinesClient) (*PipelineFetcher, error) {
+func NewPipelineFetcher(logger *logrus.Entry, client pipelinesClient, config *config.Config) (*PipelineFetcher, error) {
 	return &PipelineFetcher{
 		logger: logger,
 		client: client,
+		config: config,
 	}, nil
 }
 
-// GetPipelineStatusForProject returns the latest state for a projects pipeline, limited to given username
-func (p *PipelineFetcher) GetPipelineStatusForProject(username string, projectID int) (string, error) {
+// GetPipelineStatusForProject returns the latest state for a projects pipeline
+func (p *PipelineFetcher) GetPipelineStatusForEachRef(projectID int) (RepoStatus, error) {
+	logger := p.logger.WithField("project", projectID)
+
 	opt := &gitlab.ListProjectPipelinesOptions{
-		Username: gitlab.String(username),
+		Scope: gitlab.String("branches"),
+		ListOptions: gitlab.ListOptions{
+			PerPage: 20,
+			Page:    1,
+		},
+		//Sort: gitlab.String("asc"),
 	}
 
 	pipelines, _, err := p.client.ListProjectPipelines(projectID, opt)
 	if err != nil {
-		return "", fmt.Errorf("failed to fetch currently authenticated pipeline: %v", err)
+		return nil, fmt.Errorf("failed to fetch currently authenticated pipeline: %v", err)
 	}
 
 	if len(pipelines) == 0 {
-		return StatusSuccess, nil
+		return nil, nil
 	}
 
-	var latestStatus string
+	refStatus := make(RepoStatus)
 	for _, pipeline := range pipelines {
-		if pipeline.Status != StatusSuccess && pipeline.Status != StatusFailed {
-			p.logger.Debugf("Skipping pipeline %d due to irrelevant status %q", pipeline.Status)
+		pipelineLogger := logger.WithFields(logrus.Fields{
+			"pipeline": pipeline.ID,
+			"status":   pipeline.Status,
+			"ref":      pipeline.Ref,
+		})
+
+		if _, ok := refStatus[pipeline.Ref]; ok {
+			pipelineLogger.Debugf("Skipping pipeline, ref is already available")
 			continue
 		}
 
-		p.logger.Debugf("Processing pipeline project=%d pipeline=%d state=%s ref=%s", projectID, pipeline.ID, pipeline.Status, pipeline.Ref)
-		latestStatus = pipeline.Status
+		if pipeline.Status != StatusSuccess && pipeline.Status != StatusFailed {
+			pipelineLogger.Debugf("Skipping pipeline due to irrelevant status %q", pipeline.Status)
+			continue
+		}
+
+		pipelineLogger.Debug("Processing pipeline")
+
+		pipelineDetails, _, err := p.client.GetPipeline(projectID, pipeline.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch details of pipeline %d (project %d): %v", pipeline.ID, projectID, err)
+		}
+
+		refStatus[pipeline.Ref] = PipelineStatus{
+			ID:       pipeline.ID,
+			SHA:      pipeline.SHA,
+			Ref:      pipeline.Ref,
+			Status:   pipeline.Status,
+			Username: pipelineDetails.User.Username,
+			UserID:   pipelineDetails.User.ID,
+		}
 	}
 
-	return latestStatus, nil
+	return refStatus, nil
 }
