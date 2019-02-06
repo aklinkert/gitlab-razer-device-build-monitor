@@ -66,14 +66,20 @@ var runCmd = &cobra.Command{
 			logger.Fatalf("failed to create a new LogOutput: %v", err)
 		}
 
+		razerOutput, err := output.NewRazerDeviceOutput(logger.WithField("module", "razer"))
+		if err != nil {
+			logger.Fatalf("failed to create new RazerOutput: %v", err)
+		}
+
 		mon.RegisterNotificationReceiver(logOutput)
+		mon.RegisterNotificationReceiver(razerOutput)
 
 		if err := mon.UpdateStatus(); err != nil {
 			logger.Fatalf("Failed to do initial status update: %v", err)
 		}
 
 		ctx := exitcontext.New()
-		mon.UpdateEvery(ctx, 5*time.Minute)
+		mon.UpdateEvery(ctx, 2*time.Minute)
 	},
 }
 

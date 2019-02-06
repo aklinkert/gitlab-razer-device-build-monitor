@@ -116,7 +116,7 @@ func (m *Monitor) UpdateStatus() error {
 		return err
 	}
 
-	m.logger.Debug("Updating current status ...")
+	m.logger.Infof("Updating current status ...")
 
 	for _, repo := range repos {
 		status, err := m.pipelineFetcher.GetPipelineStatusForEachRef(repo.ID)
@@ -127,7 +127,7 @@ func (m *Monitor) UpdateStatus() error {
 		m.setRepoStatus(repo, status)
 	}
 
-	m.logger.Debug("Updating current status done. Doing Notify.")
+	m.logger.Infof("Updating current status done. Doing Notify.")
 	m.notifyStatus()
 
 	return nil

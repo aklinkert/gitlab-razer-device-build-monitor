@@ -2,14 +2,14 @@ package output
 
 import (
 	"github.com/Sirupsen/logrus"
+	"github.com/apinnecke/gitlab-razer-device-build-monitor/pkg/gitlab"
 	"github.com/apinnecke/gitlab-razer-device-build-monitor/pkg/monitor"
-	"github.com/godbus/dbus"
+	"github.com/apinnecke/gitlab-razer-device-build-monitor/pkg/razer"
 )
 
 type RazerDeviceOutput struct {
-	logger   *logrus.Entry
-	dbus     *dbus.Conn
-	razerBus dbus.BusObject
+	logger        *logrus.Entry
+	deviceManager *razer.DeviceManager
 }
 
 func NewRazerDeviceOutput(logger *logrus.Entry) (*RazerDeviceOutput, error) {
@@ -17,7 +17,9 @@ func NewRazerDeviceOutput(logger *logrus.Entry) (*RazerDeviceOutput, error) {
 		logger: logger,
 	}
 
-	if err := o.init(); err != nil {
+	var err error
+	o.deviceManager, err = razer.NewDeviceManager(logger)
+	if err != nil {
 		return nil, err
 	}
 
@@ -26,5 +28,15 @@ func NewRazerDeviceOutput(logger *logrus.Entry) (*RazerDeviceOutput, error) {
 
 // ReceiveStatusNotification changes the color of razer devices based on overall build state
 func (r *RazerDeviceOutput) ReceiveStatusNotification(notification monitor.StatusNotification) {
-
+	if notification.Status == gitlab.StatusSuccess {
+		err := r.deviceManager.SendChromaCommandToAll("setStatic", 0, 0, 255)
+		if err != nil {
+			r.logger.Error(err)
+		}
+	} else {
+		err := r.deviceManager.SendChromaCommandToAll("setBreathSingle", 255, 0, 0)
+		if err != nil {
+			r.logger.Error(err)
+		}
+	}
 }
