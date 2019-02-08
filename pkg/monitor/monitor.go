@@ -103,7 +103,7 @@ func (m *Monitor) UpdateEvery(ctx context.Context, interval time.Duration) {
 		case <-t.C:
 			err = m.UpdateStatus()
 			if err != nil {
-				m.logger.Fatal(err)
+				m.logger.Error(err)
 			}
 		}
 	}
@@ -161,7 +161,7 @@ func (m *Monitor) getRepo(repoID int) gitlab.Repo {
 func (m *Monitor) notifyStatus() {
 	username, err := m.getUsername()
 	if err != nil {
-		m.logger.Fatal(err)
+		m.logger.Error(err)
 	}
 
 	overallStatus := gitlab.StatusSuccess
